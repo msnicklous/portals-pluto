@@ -44,28 +44,34 @@ limitations under the License.
        paButton = '<portlet:namespace/>-doPA',
    
        state,
-       actparms,
        hub,
    
    // Handler for onStateChange event
-   update = function (type, s) {
-      var nc = s.p.getValue('color', '#E0E0E0');
+   update = function (type, s, renderData) {
+      var nc = s.getValue('color', '#E0E0E0');
       console.log("PAP: state updated. Event type = " + type);
       
       // change background color for message box
-      if (state.p.getValue('color') !== nc) {
+      if (state.getValue('color') !== nc) {
          document.getElementById(resdiv).style.background = nc;
       }
       state = s;
+      if ((renderData !== undefined) && (renderData !== null)) {
+         document.getElementById(resdiv).innerHTML = renderData.content;
+      }
    };
    
    // Handler for "partial action" button. Perform partial action sequence.
    document.getElementById(paButton).onclick = function () {
-      var xhr = new XMLHttpRequest(), vals, pagestate = null, markup; 
+      var xhr = new XMLHttpRequest(), vals, pagestate = null, markup, actparms, actvals; 
       console.log("PAP: Partial action button clicked.");
       
       // Add the render parameter counter as action parameter
-      actparms.setValue('numActions', state.p.getValue('numActions'));
+      actparms = hub.newParameters();
+      actvals = state.getValues('numActions');       
+      if (actvals) {
+         actparms['numActions'] = actvals;
+      }
       
       hub.startPartialAction(actparms).then(function (pai) {
          
@@ -73,20 +79,11 @@ limitations under the License.
          
          xhr.onreadystatechange = function () {
             if (xhr.readyState === 4) {
-               if (xhr.status === 200) {
-                  vals = xhr.responseText.split(";#delimiter#;");
-                  if (vals.length !== 2) {
-                     markup = "<p>Error parsing return data. # fields = " + vals.length + ".</p>";
-                  } else {
-                     markup = vals[0];
-                     pagestate = vals[1];
-                  }
-               } else {
-                  markup = "<p>Communication error. XHR status=" + xhr.statusText + "</p>";
-               } 
+               if (xhr.status !== 200) {
+                  console.log("XHR error: " + xhr.status);
+               }
                // Make sure setPageState is called even in error case in order to unblock the P.H.
-               pai.setPageState(pagestate);
-               document.getElementById(resdiv).innerHTML = markup;
+               pai.setPageState(xhr.responseText);
             }
          };
          xhr.open("POST",pai.url,true);
@@ -100,7 +97,6 @@ limitations under the License.
       console.log("PAP: registered: " + pid);
       hub = pi;
       state = hub.newState();
-      actparms = hub.newParameters();
       hub.addEventListener("portlet.onStateChange", update);
    });
    

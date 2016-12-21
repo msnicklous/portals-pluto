@@ -32,8 +32,6 @@ import javax.portlet.PortletParameters;
  * This class implements the Wrapper or Decorator pattern. 
  * Methods default to calling through to the wrapped request object.
  * </div>
- * 
- * @author Scott Nicklous
  *
  */
 public class PortletParametersWrapper implements PortletParameters {
@@ -87,7 +85,7 @@ public class PortletParametersWrapper implements PortletParameters {
     * @see javax.portlet.PortletParameters#getNames()
     */
    @Override
-   public Set<? extends String> getNames() {
+   public Set<String> getNames() {
       return wrapped.getNames();
    }
 

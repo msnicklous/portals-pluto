@@ -55,28 +55,36 @@ import org.slf4j.LoggerFactory;
  * 
  */
 public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContext, PortletAsyncContext {
-   private static final Logger LOG = LoggerFactory.getLogger(PortletAsyncContextImpl.class);
-   private static final boolean isTrace = LOG.isTraceEnabled();
-   
-   private AsyncContext                   actx;
-   
-   private final HttpServletRequest       hreq;
-   private final PortletAsyncContextListener     pal;
-   private final PortletResourceRequestContext  prctx;
+   private static final Logger                 LOG                = LoggerFactory.getLogger(PortletAsyncContextImpl.class);
+   private static final boolean                isTrace            = LOG.isTraceEnabled();
 
-   private ResourceRequest                resreq;
-   private PortletSessionBeanHolder       sessbh;
-   private PortletStateScopedBeanHolder   statebh;
-   private PortletRequestScopedBeanHolder reqbh;
-   private BeanManager                    beanmgr;
-   private Runnable                       pendingRunner;
-   private boolean                        doDeregister = true;
-   private boolean                        complete = false;
+   private AsyncContext                        actx;
 
-   public PortletAsyncContextImpl(AsyncContext actx, PortletResourceRequestContext prctx, ResourceRequest resreq) {
+   private final HttpServletRequest            hreq;
+   private final PortletAsyncContextListener   pal;
+   private final PortletResourceRequestContext prctx;
+
+   private ResourceRequest                     resreq;
+   private ResourceResponse                    resresp;
+   private boolean                             hasOriginalReqResp = true;
+
+   private PortletSessionBeanHolder            sessbh;
+   private PortletStateScopedBeanHolder        statebh;
+   private PortletRequestScopedBeanHolder      reqbh;
+   private BeanManager                         beanmgr;
+   private Runnable                            pendingRunner;
+   private boolean                             doDeregister       = true;
+   private boolean                             complete           = false;
+   private boolean                             isContextActive    = true;
+   private boolean                             isDispatchedOrComplete       = false;
+
+   public PortletAsyncContextImpl(AsyncContext actx, PortletResourceRequestContext prctx, ResourceRequest resreq, ResourceResponse resresp, boolean origReqResp) {
       this.actx = actx;
       this.prctx = prctx;
       this.resreq = resreq;
+      this.resresp = resresp;
+      this.hasOriginalReqResp = origReqResp;
+
       this.hreq = (HttpServletRequest) actx.getRequest();
       this.beanmgr = prctx.getBeanManager();
 
@@ -98,7 +106,8 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
    }
 
    /**
-    * @param complete the complete to set
+    * @param complete
+    *           the complete to set
     */
    @Override
    public void setComplete(boolean complete) {
@@ -110,7 +119,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void registerContext(boolean isListener) {
-      
+
       // if the context is already active, then ignore register / deregister calls.
       if (complete || (isListener && PortletRequestScopedBeanHolder.getBeanHolder() != null)) {
          doDeregister = false;
@@ -121,7 +130,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
          PortletRequestScopedBeanHolder.register(reqbh);
          PortletArtifactProducer.setPrecursors(resreq, prctx.getResponse(), prctx.getPortletConfig());
       }
-      
+
       if (isTrace) {
          StringBuilder txt = new StringBuilder();
          txt.append("Registered context.");
@@ -144,7 +153,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
          this.reqbh = PortletRequestScopedBeanHolder.deregister();
          PortletArtifactProducer.remove();
       }
-      
+
       if (isTrace) {
          StringBuilder txt = new StringBuilder();
          txt.append("Deregistered context.");
@@ -156,8 +165,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
    }
 
    /**
-    * Launches any runner that was registered for execution. To be called when 
-    * leaving the portlet servlet. 
+    * Launches any runner that was registered for execution. To be called when leaving the portlet servlet.
     */
    @Override
    public void launchRunner() {
@@ -182,27 +190,27 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
 
    /**
     * Finds and returns the portlet servlet request wrapper that provides async functionality
+    * 
     * @return
     */
    @Override
    public HttpServletRequestWrapper getAsyncRequestWrapper() {
       HttpServletPortletRequestWrapper wrapper = null;
-      
+
       // find our wrapper in case it was wrapped again
-      
+
       ServletRequest wreq = prctx.getAsyncServletRequest();
-      while ((wreq instanceof ServletRequestWrapper) &&
-            !(wreq instanceof HttpServletPortletRequestWrapper) ) {
+      while ((wreq instanceof ServletRequestWrapper) && !(wreq instanceof HttpServletPortletRequestWrapper)) {
          wreq = ((ServletRequestWrapper) wreq).getRequest();
       }
-      
+
       if (wreq instanceof HttpServletPortletRequestWrapper) {
          wrapper = (HttpServletPortletRequestWrapper) wreq;
-      } 
-      
+      }
+
       return wrapper;
    }
-   
+
    /**
     * Called when exiting portlet handling for this thread. The bean holders are deregistered from the thread and any
     * beans contained are destroyed.
@@ -216,13 +224,15 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
    }
 
    /*
-    * (non-Javadoc)
+    * Called when asynchronous processing is restarted
     * 
     * @see org.apache.pluto.driver.services.container.PortletAsyncContext#setWrapped(javax.servlet.AsyncContext)
     */
    @Override
    public void setWrapped(AsyncContext actx) {
       this.actx = actx;
+      isContextActive = true;
+      isDispatchedOrComplete = false;
    }
 
    /*
@@ -232,6 +242,9 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void addListener(AsyncListener l) {
+      if (!isContextActive) {
+         throw new IllegalStateException("Listener can only be added when the asynchronous context is active.");
+      }
       pal.addListener(l);
    }
 
@@ -243,6 +256,9 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void addListener(AsyncListener l, ServletRequest req, ServletResponse resp) {
+      if (!isContextActive) {
+         throw new IllegalStateException("Listener can only be added when the asynchronous context is active.");
+      }
       pal.addListener(l, req, resp);
    }
 
@@ -253,6 +269,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void complete() {
+      isDispatchedOrComplete = true;
       actx.complete();
    }
 
@@ -264,7 +281,13 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
    @SuppressWarnings("unchecked")
    @Override
    public <T extends AsyncListener> T createListener(Class<T> cls) throws ServletException {
-      return (T) createInstance(cls);
+      T obj = null;
+      try {
+         obj = (T) createInstance(cls);
+      } catch (Throwable t) {
+         throw new ServletException(t);
+      }
+      return obj;
    }
 
    /*
@@ -274,6 +297,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void dispatch() {
+      isDispatchedOrComplete = true;
       // workaround for Tomcat bug 59213
       actx.dispatch(hreq.getServletContext(), hreq.getServletPath());
    }
@@ -285,10 +309,10 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void dispatch(String path) {
+      isDispatchedOrComplete = true;
 
       // enable proper query string parameter handling during async dispatch
-      HttpServletPortletRequestWrapper wrapper = 
-            (HttpServletPortletRequestWrapper) getAsyncRequestWrapper();
+      HttpServletPortletRequestWrapper wrapper = (HttpServletPortletRequestWrapper) getAsyncRequestWrapper();
       wrapper.startAsyncDispatch(path);
 
       // workaround for Tomcat bug 59213
@@ -302,6 +326,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void dispatch(ServletContext sctx, String path) {
+      isDispatchedOrComplete = true;
       actx.dispatch(sctx, path);
    }
 
@@ -342,7 +367,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public boolean hasOriginalRequestAndResponse() {
-      return actx.hasOriginalRequestAndResponse();
+      return hasOriginalReqResp;
    }
 
    /*
@@ -362,25 +387,41 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
     */
    @Override
    public void start(Runnable run) {
+      if (!isContextActive) {
+         throw new IllegalStateException("Asynchronous thread can only be started when the asynchronous context is active.");
+      }
+      if (isDispatchedOrComplete) {
+         throw new IllegalStateException("Asynchronous thread cannot be started after an asynchronous dispatch has been performed or asynchronous processing has been completed.");
+      }
       pendingRunner = run;
    }
 
    @Override
    public void addListener(javax.portlet.PortletAsyncListener listener) throws IllegalStateException {
+      if (!isContextActive) {
+         throw new IllegalStateException("Listener can only be added when the asynchronous context is active.");
+      }
       pal.addListener(listener);
    }
 
    @Override
-   public void addListener(javax.portlet.PortletAsyncListener listener, ResourceRequest request,
-         ResourceResponse response) throws IllegalStateException {
+   public void addListener(javax.portlet.PortletAsyncListener listener, ResourceRequest request, ResourceResponse response) throws IllegalStateException {
+      if (!isContextActive) {
+         throw new IllegalStateException("Listener can only be added when the asynchronous context is active.");
+      }
       pal.addListener(listener, request, response);
    }
 
    @SuppressWarnings("unchecked")
    @Override
-   public <T extends javax.portlet.PortletAsyncListener> T createPortletAsyncListener(Class<T> cls)
-         throws PortletException {
-      return (T) createInstance(cls);
+   public <T extends javax.portlet.PortletAsyncListener> T createPortletAsyncListener(Class<T> cls) throws PortletException {
+      T obj;
+      try {
+         obj = (T) createInstance(cls);
+      } catch (Throwable t) {
+         throw new PortletException(t);
+      }
+      return obj;
    }
 
    @Override
@@ -390,10 +431,19 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
 
    @Override
    public ResourceResponse getResourceResponse() throws IllegalStateException {
-      return prctx.getResponse();
+      return resresp;
    }
-   
-   private Object createInstance(Class<?> cls) {
+
+   /**
+    * Called when the dispatched request body is not longer being executed. After 
+    * a startAsync() call, this means that listeners cannot be added, etc.
+    */
+   @Override
+   public void setContextInactive() {
+      isContextActive = false;
+   }
+
+   private Object createInstance(Class<?> cls) throws IllegalAccessException, InstantiationException {
       if (isTrace) {
          StringBuilder txt = new StringBuilder();
          txt.append("Creating listener.");
@@ -401,7 +451,7 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
          txt.append(", listener class: ").append(cls.getCanonicalName());
          LOG.trace(txt.toString());
       }
-      
+
       Object lis = null;
       if (beanmgr != null) {
          Set<Bean<?>> beans = beanmgr.getBeans(cls);
@@ -411,17 +461,13 @@ public class PortletAsyncContextImpl implements PortletAsyncManager, AsyncContex
          } else {
             LOG.warn("Could not get bean reference for: " + cls.getCanonicalName());
          }
-      } 
-      
+      }
+
       if (lis == null) {
          LOG.trace("Instantiating class directly: " + cls.getCanonicalName());
-         try {
-            lis = cls.newInstance();
-         } catch (Exception e) {
-            LOG.warn("Could not instantiate class: " + cls.getCanonicalName());
-         }
+         lis = cls.newInstance();
       }
-      
+
       return lis;
 
    }

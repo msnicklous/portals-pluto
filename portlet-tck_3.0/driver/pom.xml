@@ -1,4 +1,4 @@
-<!--
+<?xml version="1.0" encoding="UTF-8"?><!--
     Licensed to the Apache Software Foundation (ASF) under one
     or more contributor license agreements.  See the NOTICE file
     distributed with this work for additional information
@@ -15,14 +15,12 @@
     KIND, either express or implied.  See the License for the
     specific language governing permissions and limitations
     under the License.     
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+--><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
    <modelVersion>4.0.0</modelVersion>
 
    <parent>
       <groupId>javax.portlet</groupId>
-      <artifactId>tck</artifactId>
+      <artifactId>portlet-tck</artifactId>
       <version>3.0-SNAPSHOT</version>
    </parent>
 
@@ -45,17 +43,17 @@
          <scope>compile</scope>
       </dependency>
       
-      <!-- PhantomJs Headless browser - Use if the default headless browser of Selenium is not working.
-           In order to use - 
-              1. Download PhantomJs - http://phantomjs.org/download.html
-              2. Configure driver to use PhantomJs in TCKSimpleTestDriver->setUpBeforeClass() method --> 
-      <!-- 
       <dependency>
-            <groupId>com.github.detro.ghostdriver</groupId>
-            <artifactId>phantomjsdriver</artifactId>
-            <version>1.0.4</version>
+         <groupId>org.seleniumhq.selenium</groupId>
+         <artifactId>htmlunit-driver</artifactId>
+         <scope>compile</scope>
       </dependency>
-	  -->
+      
+      <dependency>
+         <groupId>com.codeborne</groupId>
+         <artifactId>phantomjsdriver</artifactId>
+         <scope>compile</scope>
+      </dependency>
        
       <!-- Dependency on common module for element ID suffixes -->
       <dependency>
@@ -166,12 +164,6 @@
       <dependency>
          <groupId>${project.groupId}</groupId>
          <artifactId>tck-V2AddlResponseTests</artifactId>
-         <version>${project.version}</version>
-         <type>war</type>
-      </dependency>
-      <dependency>
-         <groupId>${project.groupId}</groupId>
-         <artifactId>tck-V2AddlUrlTests</artifactId>
          <version>${project.version}</version>
          <type>war</type>
       </dependency>
@@ -313,7 +305,84 @@
          <version>${project.version}</version>
          <type>war</type>
       </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletContextTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletConfigTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+	   <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3URLTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+	   <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3RenderStateTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3HeaderPortletTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletParametersTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletArtifactValidityTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletApplicationConfigTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletAppConfigOverrideTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletConfigTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletHubTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3ResourceAsyncTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
    </dependencies>
+
+   <properties>
+      <additional.testcases.only>true</additional.testcases.only>
+      <additional.pagefile.only>true</additional.pagefile.only>
+   </properties>
 
    <build>
       <finalName>${project.artifactId}</finalName>
@@ -321,15 +390,40 @@
       <resources>
          <resource>
             <directory>src/main/resources/xml-resources</directory>
-            <targetPath>${project.build.directory}/${test.file.dir}</targetPath>
+            <targetPath>../${test.file.dir}</targetPath>
             <includes>
                <include>*</include>
+            </includes>
+         </resource>
+         <resource>
+            <directory>src/main/resources/xml-resources</directory>
+            <targetPath>${test.list.dir}</targetPath>
+            <includes>
+               <include>ignoredTestCases.xml</include>
             </includes>
          </resource>
       </resources>
 
       <plugins>
 
+         <!-- get the phantomjs executable -->
+         <plugin>
+            <groupId>com.github.klieber</groupId>
+            <artifactId>phantomjs-maven-plugin</artifactId>
+            <version>0.7</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>install</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <version>1.9.7</version>
+              <checkSystemPath>false</checkSystemPath>
+            </configuration>
+         </plugin>
+            
          <!-- For extracting the XML transformation stylesheets from common module -->
          <plugin>
             <groupId>org.apache.maven.plugins</groupId>
@@ -360,7 +454,6 @@
                         tck-V2AddlPortletTests,
                         tck-V2AddlRequestTests,
                         tck-V2AddlResponseTests,
-                        tck-V2AddlUrlTests,
                         tck-V2SigTestsAction,
                         tck-V2SigTestsEnv,
                         tck-V2SigTestsEvent,
@@ -383,7 +476,20 @@
                         tck-V2DispatcherTests4,
                         tck-V2DispatcherTests5,
                         tck-V2DispatcherTests6,
-                        tck-V2DispatcherTests3S
+                        tck-V2DispatcherTests3S,
+                        
+                        tck-V3PortletContextTests,
+                        tck-V3PortletConfigTests,
+						      tck-V3URLTests,
+						      tck-V3RenderStateTests
+                        ,tck-V3HeaderPortletTests
+                        ,tck-V3PortletParametersTests
+                        ,tck-V3AnnotationPortletArtifactValidityTests
+                        ,tck-V3AnnotationPortletApplicationConfigTests
+                        ,tck-V3AnnotationPortletAppConfigOverrideTests
+                        ,tck-V3AnnotationPortletConfigTests
+                        ,tck-V3PortletHubTests
+                        ,tck-V3ResourceAsyncTests
                      </includeArtifactIds>
                      <includes>${test.file.dir}/*.xml</includes>
                      <outputDirectory>${project.build.directory}</outputDirectory>
@@ -416,8 +522,7 @@
                      </includes>
                      <outputDir>${project.build.directory}/classes/${test.list.dir}</outputDir>
                      <fileMappers>
-                        <fileMapper
-                           implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
                            <targetName>${test.list.name}</targetName>
                         </fileMapper>
                      </fileMappers>
@@ -433,8 +538,7 @@
                      </includes>
                      <outputDir>${project.build.directory}/classes/${test.list.dir}</outputDir>
                      <fileMappers>
-                        <fileMapper
-                           implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
+                        <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
                            <targetName>${page.file.final.name}</targetName>
                         </fileMapper>
                      </fileMappers>
@@ -458,6 +562,17 @@
                      <mainClass>example.Selenium2Example</mainClass>
                   </manifest>
                </archive>
+            </configuration>
+         </plugin>
+
+         <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+            <configuration>
+               <excludes>
+                  <exclude>.externalToolBuilders/Maven_Ant_Builder.launch</exclude>
+                  <exclude>maven-eclipse.xml</exclude>
+               </excludes>
             </configuration>
          </plugin>
       </plugins>
@@ -529,6 +644,14 @@
                         <property>
                            <name>test.list.file</name>
                            <value>${project.build.directory}/classes/${test.list.dir}/${test.list.name}</value>
+                        </property>
+                        <property>
+                           <name>test.ignore.list.file</name>
+                           <value>${project.build.directory}/classes/${test.list.dir}/${test.ignore.list.name}</value>
+                        </property>
+                        <property>
+                           <name>test.ignore</name>
+                           <value>true</value>
                         </property>
                         <property>
                            <name>test.browser</name>

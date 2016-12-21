@@ -22,6 +22,7 @@ import java.util.Map;
 
 import javax.enterprise.inject.spi.BeanManager;
 import javax.portlet.PortletConfig;
+import javax.portlet.PortletRequest;
 import javax.portlet.ResourceParameters;
 import javax.portlet.ResourceRequest;
 import javax.portlet.ResourceResponse;
@@ -57,18 +58,16 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
    private static final boolean isDebug = LOG.isDebugEnabled();
    private static final boolean isTrace = LOG.isTraceEnabled();
 
-   private String                   pageState;
    private ResourceResponse         response;
    private PortletAsyncContextImpl  actx;
    private BeanManager              beanmgr;
 
    public PortletResourceRequestContextImpl(PortletContainer container, HttpServletRequest containerRequest,
-         HttpServletResponse containerResponse, PortletWindow window, String pageState) {
+         HttpServletResponse containerResponse, PortletWindow window) {
       // if pageState != null, we're dealing with a Partial Action request, so
       // the servlet parameters are not to be used. Otherwise, resource params could be
       // passed as servlet parameters.
-      super(container, containerRequest, containerResponse, window, (pageState == null));
-      this.pageState = pageState;
+      super(container, containerRequest, containerResponse, window, true, PortletRequest.RESOURCE_PHASE);
    }
    
    @Override
@@ -89,16 +88,6 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
    @Override
    public String getResourceID() {
       return getPortalURL().getResourceID();
-   }
-
-   /*
-    * (non-Javadoc)
-    * 
-    * @see org.apache.pluto.container.PortletResourceRequestContext#getPageState()
-    */
-   @Override
-   public String getPageState() {
-      return pageState;
    }
 
    @Override
@@ -141,11 +130,15 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
 
    @Override
    public AsyncContext startAsync(ResourceRequest request) throws IllegalStateException {
-      return startAsync(request, response);
+      return startAsync(request, response, true);
    }
 
    @Override
-   public AsyncContext startAsync(ResourceRequest resreq, ResourceResponse resresp) throws IllegalStateException {
+   public AsyncContext startAsync(ResourceRequest resreq, ResourceResponse resresp, boolean origReqResp) throws IllegalStateException {
+      if (!isAsyncSupported()) {
+         throw new IllegalStateException("This portlet does not support asynchronous mode.");
+      }
+
       if (actx != null && actx.isComplete()) {
          return null;
       }
@@ -216,7 +209,7 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
       if (actx != null) {
          actx.setWrapped(hreq.startAsync(wreq, wresp));
       } else {
-         actx = new PortletAsyncContextImpl(hreq.startAsync(wreq, wresp), this, resreq);
+         actx = new PortletAsyncContextImpl(hreq.startAsync(wreq, wresp), this, resreq, resresp, origReqResp);
       }
 
       if (isTrace) {
@@ -264,6 +257,9 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
    // For wrapper use
    @Override
    public AsyncContext startAsync() {
+      if (!isAsyncSupported()) {
+         throw new IllegalStateException("This portlet does not support asynchronous mode.");
+      }
       if (actx != null && actx.isComplete()) {
          return null;
       }
@@ -280,6 +276,9 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
    // for wrapper use
    @Override
    public AsyncContext startAsync(ServletRequest request, ServletResponse response) {
+      if (!isAsyncSupported()) {
+         throw new IllegalStateException("This portlet does not support asynchronous mode.");
+      }
       if (actx != null && actx.isComplete()) {
          return null;
       }
@@ -300,11 +299,14 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
 
    @Override
    public boolean isAsyncSupported() {
-      return getServletRequest().isAsyncSupported();
+      return getPortletWindow().getPortletDefinition().isAsyncSupported();
    }
 
    @Override
    public AsyncContext getAsyncContext() {
+      if (!isAsyncSupported()) {
+         throw new IllegalStateException("This portlet does not support asynchronous mode.");
+      }
       if (actx != null) {
          if (actx.isComplete()) {
             return null;
@@ -332,4 +334,18 @@ public class PortletResourceRequestContextImpl extends PortletRequestContextImpl
 
       return sess;
    }
+   
+   /**
+    * called with the argument set to false when the request body is no longer being executed.
+    * In this case, set the PortletAsyncContext to no longer active, which means that
+    * no more listeners can be added, etc.
+    */
+   @Override
+   public void setExecutingRequestBody(boolean executingRequestBody) {
+      if (actx != null && !executingRequestBody) {
+         actx.setContextInactive();
+      }
+      super.setExecutingRequestBody(executingRequestBody);
+   }
+
 }

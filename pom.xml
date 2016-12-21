@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.portals</groupId>
     <artifactId>portals-pom</artifactId>
-    <version>1.3</version>
+    <version>1.4</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -127,6 +127,19 @@ generate mailto links. -->
     </developer>
 
     <developer>
+      <name>Neil Griffin</name>
+      <id>asfgriff</id>
+      <email>neil.griffin#a@T#portletfaces.d0t.org</email>
+      <timezone>+8</timezone>
+      <organization>Liferay</organization>
+      <organizationUrl>https://www.liferay.com/</organizationUrl>
+      <roles>
+        <role>Specification Architect, JSR 362 Portlet Specification 3.0</role>
+        <role>Java Developer</role>
+      </roles>
+    </developer>
+
+    <developer>
       <name>Nick Lothian</name>
       <id>nlothian</id>
       <email>nlothian#a@T#apache.d0t.org</email>
@@ -167,7 +180,13 @@ generate mailto links. -->
       <name>David S. Taylor</name>
       <id>taylor</id>
       <email>david#a@T#bluesunrise.d0t.com</email>
-      <organization />
+      <timezone>+8</timezone>
+      <organization>Bluesunrise</organization>
+      <organizationUrl>https://www.bluesunrise.com/</organizationUrl>
+      <roles>
+        <role>Expert Group Member, JSR 362 Portlet Specification 3.0</role>
+        <role>Java Developer</role>
+      </roles>
     </developer>
 
     <developer>
@@ -238,11 +257,11 @@ generate mailto links. -->
     </contributor>
   </contributors>
 
-  <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/portals/pluto/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/portals/pluto/trunk</developerConnection>
-    <url>http://svn.apache.org/viewcvs.cgi/portals/pluto/trunk</url>
-  </scm>
+   <scm>
+      <connection>scm:git:https://git-wip-us.apache.org/repos/asf/portals-pluto.git</connection>
+      <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/portals-pluto.git</developerConnection>
+      <url>https://github.com/apache/portals-pluto</url>
+   </scm>
 
   <!-- Dependency Version Properties ======================================= -->
 
@@ -253,6 +272,8 @@ generate mailto links. -->
   1)  maven-pluto-plugin/src/main/resources/versions.properties as well!
   -->
   <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
     <pluto.container.name>Pluto</pluto.container.name>
     <javax.portlet.version.major>3</javax.portlet.version.major>
     <javax.portlet.version.minor>0</javax.portlet.version.minor>
@@ -272,12 +293,14 @@ generate mailto links. -->
 <!--     <springframework.version>4.2.3.RELEASE</springframework.version> -->
     <maven.version>2.0.5</maven.version>
     <ant.version>1.6.5</ant.version>
+    <commons-lang.version>3.4</commons-lang.version>
     <commons-io.version>2.4</commons-io.version>
     <ccpp-api.version>1.0</ccpp-api.version>
     <junit.version>4.12</junit.version>
     <jmock.version>1.2.0</jmock.version>
     <xmlunit.version>1.1</xmlunit.version>
     <cdi.version>2.3.1.Final</cdi.version>
+    <annotation-detector.version>3.0.5</annotation-detector.version>
 
     <!-- The following properties are not directly used as maven
 dependencies, they're used by the maven pluto plugin for
@@ -298,6 +321,11 @@ TODO: Check if we need all of them. -->
     <!-- scope of certain dependencies is "compile" for deployment on tomcat, 
          but "provided" for deployment on tomee. See tomee profile. -->
     <dependency.scope>compile</dependency.scope>
+    
+    <!-- following properties control whether or not demos are included in page 
+         config file (see profile 'excludeDemos' below) -->
+    <includeDemosBegin></includeDemosBegin>
+	 <includeDemosEnd></includeDemosEnd>
   </properties>
 
   <dependencyManagement>
@@ -321,9 +349,10 @@ TODO: Check if we need all of them. -->
 
       <!-- Specification Libraries =========================================== -->
       <dependency>
-        <groupId>org.apache.portals</groupId>
-        <artifactId>portlet-api</artifactId>
-        <version>${portals.portlet-api.version}</version>
+         <groupId>javax.portlet</groupId>
+         <artifactId>portlet-api</artifactId>
+         <version>${project.version}</version>
+         <scope>provided</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.tomcat</groupId>
@@ -365,6 +394,13 @@ TODO: Check if we need all of them. -->
           <artifactId>weld-servlet</artifactId>
           <version>${cdi.version}</version>
       </dependency>      
+
+      <!-- For method annotation scanning ==================================== -->
+      <dependency>
+         <groupId>eu.infomas</groupId>
+         <artifactId>annotation-detector</artifactId>
+         <version>${annotation-detector.version}</version>
+      </dependency>
 
       <!--  CCPP Libraries -->
       <dependency>
@@ -494,6 +530,11 @@ TODO: Check if we need all of them. -->
         <version>${commons-io.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>${commons-lang.version}</version>
+      </dependency>
+      <dependency>
         <groupId>commons-digester</groupId>
         <artifactId>commons-digester</artifactId>
         <version>${commons-digester.version}</version>
@@ -531,6 +572,11 @@ TODO: Check if we need all of them. -->
           <version>${project.version}</version>
         </plugin>
         <plugin>
+           <groupId>org.apache.maven.plugins</groupId>
+           <artifactId>maven-jar-plugin</artifactId>
+           <version>2.4</version>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-war-plugin</artifactId>
           <version>2.4</version>
@@ -538,7 +584,7 @@ TODO: Check if we need all of them. -->
         <plugin>
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.10</version>
+          <version>0.12</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -557,7 +603,7 @@ TODO: Check if we need all of them. -->
         <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-bundle-plugin</artifactId>
-          <version>2.0.1</version>
+          <version>3.2.0</version>
           <extensions>true</extensions>
           <configuration>
             <instructions>
@@ -640,8 +686,12 @@ TODO: Check if we need all of them. -->
         <module>pluto-portal-driver-impl</module>
         <module>pluto-portal</module>
         <module>pluto-testsuite</module>
+
+        <!-- Aggregated common jar for shared library location -->
+        <module>pluto-common</module>
         
         <!-- PortletHub demo portlets -->
+        <module>ChatRoomDemo</module>
         <module>PortletHubDemo</module>
         <module>PortletV3Demo</module>
         <module>PortletV3AnnotatedDemo</module>
@@ -651,6 +701,9 @@ TODO: Check if we need all of them. -->
         <module>maven-pluto-plugin</module>
         <module>pluto-ant-tasks</module>
         <module>pluto-site-skin</module>
+        
+        <!-- the Technology Compliance Kit -->
+        <module>portlet-tck_3.0</module>
       </modules>
     </profile>
     
@@ -673,6 +726,20 @@ TODO: Check if we need all of them. -->
          <!-- scope of certain dependencies is "compile" for deployment on tomcat, 
               but "provided" for deployment on tomee. See tomee profile. -->
 		  <dependency.scope>provided</dependency.scope>
+      </properties>
+    </profile>
+    
+    <!-- Build Pluto for deployment without the demos -->
+    <profile>
+      <id>excludeDemos</id>
+      <activation>
+        <property>
+          <name>excludeDemos</name>
+        </property>
+      </activation>
+      <properties>
+		  <includeDemosBegin>&lt;!--</includeDemosBegin>
+		  <includeDemosEnd>--&gt;</includeDemosEnd>
       </properties>
     </profile>
 

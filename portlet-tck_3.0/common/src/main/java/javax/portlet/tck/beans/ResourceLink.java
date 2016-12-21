@@ -36,6 +36,7 @@ package javax.portlet.tck.beans;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Map;
 
 import javax.portlet.ResourceURL;
 import javax.portlet.tck.constants.Constants;
@@ -46,17 +47,18 @@ import javax.portlet.tck.constants.Constants;
  * @author nick
  */
 public class ResourceLink {
-   
-   String tcName;
-   String urlstr;
+
+   String      tcName;
+   String      urlstr;
    ResourceURL rurl;
-   String actId;
-   String linkId;
-   String divId;
-   String resId;
-   String detId;
-   String title;
-   
+   String      actId;
+   String      linkId;
+   String      divId;
+   String      resId;
+   String      detId;
+   String      asyncId;
+   String      title;
+
    /**
     * Creates an empty link.
     */
@@ -67,6 +69,7 @@ public class ResourceLink {
       divId = "";
       resId = "";
       detId = "";
+      asyncId = "";
       title = "";
       rurl = null;
       urlstr = null;
@@ -75,8 +78,10 @@ public class ResourceLink {
    /**
     * Creates a resource link initialized according to the parameters.
     * 
-    * @param tcName     test case name
-    * @param url        url for the test case
+    * @param tcName
+    *           test case name
+    * @param url
+    *           url for the test case
     */
    public ResourceLink(String tcName, ResourceURL rurl) {
       this.tcName = tcName;
@@ -85,17 +90,20 @@ public class ResourceLink {
       this.divId = tcName + Constants.RESOURCE_DIV_ID;
       this.resId = tcName + Constants.RESULT_ID;
       this.detId = tcName + Constants.DETAIL_ID;
+      this.asyncId = tcName + Constants.ASYNC_ID;
       this.title = " Resource Link";
       this.rurl = rurl;
       this.urlstr = null;
    }
 
    /**
-    * Creates a resource link initialized with a URL in string form.
-    * This enables certain URL test cases such as "*URL.toString()"
+    * Creates a resource link initialized with a URL in string form. This enables certain URL test cases such as
+    * "*URL.toString()"
     * 
-    * @param tcName     test case name
-    * @param urlstr     url for the test case in string form
+    * @param tcName
+    *           test case name
+    * @param urlstr
+    *           url for the test case in string form
     */
    public ResourceLink(String tcName, String urlstr) {
       this.tcName = tcName;
@@ -104,79 +112,81 @@ public class ResourceLink {
       this.divId = tcName + Constants.RESOURCE_DIV_ID;
       this.resId = tcName + Constants.RESULT_ID;
       this.detId = tcName + Constants.DETAIL_ID;
+      this.asyncId = tcName + Constants.ASYNC_ID;
       this.title = " Resource Link";
       this.urlstr = urlstr;
       this.rurl = null;
    }
 
    /**
-    * Generates HTML markup representing the test link. 
+    * Generates HTML markup representing the test link.
     * 
-    * Note that the div element containing the item that is to be acted upon
-    * by the client must have an id equal to the test case name.
+    * Note that the div element containing the item that is to be acted upon by the client must have an id equal to the
+    * test case name.
     * 
-    * @return  HTML markup representing the test link
+    * @return HTML markup representing the test link
     */
    @Override
    public String toString() {
-      
-      if (urlstr == null) urlstr = rurl.toString();
+
+      if (urlstr == null)
+         urlstr = rurl.toString();
       StringBuilder sb = new StringBuilder();
       sb.append("<div class='portletTCKTestcase' name='");
       sb.append(tcName);
-      sb.append("'>");
-      sb.append("<h4>");
+      sb.append("'>\n");
+      sb.append("<h4>\n");
       sb.append(tcName);
       sb.append(" " + title + ":");
-      sb.append("</h4>");
+      sb.append("</h4>\n");
       sb.append("<a class='portletTCKLink' id='");
       sb.append(linkId);
       sb.append("' href='");
       sb.append(urlstr);
-      sb.append("'>");
+      sb.append("'>\n");
       sb.append(tcName);
-      sb.append("</a>");
-      sb.append("</div>");
+      sb.append("</a>\n");
+      sb.append("</div>\n");
 
       return sb.toString();
    }
-   
+
    /**
-    * Generates HTML markup representing the test link and
-    * writes them to the writer provided.
+    * Generates HTML markup representing the test link and writes them to the writer provided.
     * 
-    * @param writer  Writer to which the string is written
+    * @param writer
+    *           Writer to which the string is written
     */
-   public void writeTo(Writer writer)throws IOException {
+   public void writeTo(Writer writer) throws IOException {
       writer.write(this.toString());
    }
-   
+
    /**
     * Writes resource-fetching JavaScript code into the output stream.
     * 
-    * This method is meant to be used by a test case whose evaluation code is 
-    * located in the serveResource method accessed through the resource link
-    * information contained in this class. 
+    * This method is meant to be used by a test case whose evaluation code is located in the serveResource method
+    * accessed through the resource link information contained in this class.
     * 
-    * When the link in the output is clicked, the result will be retrieved
-    * and inserted into the markup.
+    * When the link in the output is clicked, the result will be retrieved and inserted into the markup.
     * 
-    * @param writer     Writer to which the string is written
-    * @throws IOException 
+    * @param writer
+    *           Writer to which the string is written
+    * @throws IOException
     */
    public void writeResourceFetcher(Writer writer) throws IOException {
 
-      if (urlstr == null) urlstr = rurl.toString();
+      if (urlstr == null)
+         urlstr = rurl.toString();
       StringBuilder sb = new StringBuilder();
       TestResult tr = new TestResult(tcName, false, "");
       sb.append("<div class='portletTCKTestcase' name='").append(tcName);
       sb.append("' id='").append(divId).append("'>\n");
-      sb.append("<h4>");
+      sb.append("<h4>\n");
       sb.append(tcName);
       sb.append(": Click for results from serveResource:");
       sb.append("</h4>\n");
       sb.append("<a class='portletTCKLink' id='");
-      sb.append(actId).append("' href='javascript:;'>Waiting for results ...</a>");
+      sb.append(actId).append("' href='javascript:;'>Waiting for results ...</a>\n");
       sb.append("</div>\n");
 
       sb.append("<script>\n");
@@ -188,7 +198,7 @@ public class ResourceLink {
       sb.append("            if (xhr.status==200) {\n");
       sb.append("               document.getElementById('" + divId + "').innerHTML=xhr.responseText;\n");
       sb.append("            } else {\n");
-      sb.append("               var str=\"" + tr.toString() + "\";\n");
+      sb.append("               var str=\"" + tr.toString().replaceAll("\n", "") + "\";\n");
       sb.append("               document.getElementById('" + divId + "').innerHTML=str;\n");
       sb.append("               str=\"XMLHttpRequest status=\" + xhr.status;\n");
       sb.append("               document.getElementById('" + detId + "').innerHTML=str;\n");
@@ -205,4 +215,150 @@ public class ResourceLink {
       writer.write(sb.toString());
    }
    
+   /**
+    * Writes resource-fetching JavaScript code into the output stream.
+    * The resource is retrieved without waiting for a link to be clicked. 
+    * 
+    * @param writer
+    *           Writer to which the string is written
+    * @throws IOException
+    */
+   public void writeResourceFetcherImmediate(Writer writer) throws IOException {
+
+      if (urlstr == null)
+         urlstr = rurl.toString();
+      StringBuilder sb = new StringBuilder();
+      sb.append("<div class='portletTCKTestcase' name='").append(tcName);
+      sb.append("' id='").append(divId).append("'>\n");
+      sb.append("</div>\n");
+
+      sb.append("<script>\n");
+      sb.append("(function () {\n");
+      sb.append("   var xhr = new XMLHttpRequest();\n");
+      sb.append("   xhr.onreadystatechange=function() {\n");
+      sb.append("      if (xhr.readyState==4) {\n");
+      sb.append("         if (xhr.status==200) {\n");
+      sb.append("            document.getElementById('" + divId + "').innerHTML=xhr.responseText;\n");
+      sb.append("         }\n");
+      sb.append("      }\n");
+      sb.append("   };\n");
+      sb.append("   xhr.open('GET', '" + urlstr + "',true);\n");
+      sb.append("   xhr.send();\n");
+      sb.append("})();\n");
+      sb.append("</script>\n");
+
+      writer.write(sb.toString());
+   }
+   
+   /**
+    * Writes resource-fetching JavaScript code into the output stream for testing
+    * the resource method asynchronous support. Can fetch twice - once for preparation
+    * and once to collect the results.
+    * The resource is retrieved without waiting for a link to be clicked. 
+    * 
+    * @param writer
+    *           Writer to which the string is written
+    * @throws IOException
+    */
+   public void writeResourceFetcherAsync(Writer writer) throws IOException {
+
+      if (urlstr == null)
+         urlstr = rurl.toString();
+      StringBuilder sb = new StringBuilder();
+      sb.append("<div class='portletTCKTestcase' name='").append(tcName);
+      sb.append("' id='").append(asyncId).append("'>\n");
+      sb.append("<h4>\n");
+      sb.append(tcName);
+      sb.append(":</h4>\n");
+      sb.append("<p>Waiting ...</p>\n");
+      sb.append("</div>\n");
+
+      sb.append("<script>\n");
+      sb.append("(function fetch (retries) {\n");
+      sb.append("   var xhr = new XMLHttpRequest();\n");
+      sb.append("   xhr.onreadystatechange=function() {\n");
+      sb.append("      if (xhr.readyState==4) {\n");
+      sb.append("         if (xhr.status==200) {\n");
+      sb.append("            if (xhr.responseText === 'repeat' && retries > 0) {\n");
+      sb.append("               window.setTimeout(function () {fetch(retries - 1);}, 200);\n");
+      sb.append("            } else if (xhr.responseText === 'repeat') {\n");
+      sb.append("               document.getElementById('" + asyncId + "').innerHTML += '<p>Too many retries.</p>';\n");
+      sb.append("               document.getElementById('" + asyncId + "').id = '" + resId + "';\n");
+      sb.append("            } else if (xhr.responseText === '') {\n");
+      sb.append("               document.getElementById('" + asyncId + "').innerHTML += '</p>Empty response.</p>';\n");
+      sb.append("               document.getElementById('" + asyncId + "').id = '" + resId + "';\n");
+      sb.append("            } else {\n");
+      sb.append("               document.getElementById('" + asyncId + "').innerHTML=xhr.responseText;\n");
+      sb.append("            }\n");
+      sb.append("         }\n");
+      sb.append("      }\n");
+      sb.append("   };\n");
+      sb.append("   xhr.open('GET', '" + urlstr + "',true);\n");
+      sb.append("   xhr.send();\n");
+      sb.append("})(5);\n");
+      sb.append("</script>\n");
+
+      writer.write(sb.toString());
+   }
+   
+   /**
+    * Writes resource-fetching JavaScript code into the output stream.
+    * Can fetch twice - once for preparation and once to collect the results.
+    * The resource is retrieved without waiting for a link to be clicked. 
+    * 
+    * @param writer        Writer to which the string is written
+    * @throws IOException
+    */
+   public void writeResourceFetcherCustom(Writer writer, Map<String, String> headers, String method, String body) throws IOException {
+
+      if (urlstr == null)
+         urlstr = rurl.toString();
+      StringBuilder sb = new StringBuilder();
+      sb.append("<div class='portletTCKTestcase' name='").append(tcName);
+      sb.append("' id='").append(asyncId).append("'>\n");
+      sb.append("<h4>\n");
+      sb.append(tcName);
+      sb.append(":</h4>\n");
+      sb.append("<p>Waiting ...</p>\n");
+      sb.append("</div>\n");
+
+      sb.append("<script>\n");
+      sb.append("(function fetch (retries) {\n");
+      sb.append("   var xhr = new XMLHttpRequest();\n");
+      sb.append("   xhr.onreadystatechange=function() {\n");
+      sb.append("      if (xhr.readyState==4) {\n");
+      sb.append("         if (xhr.status==200) {\n");
+      sb.append("            if (xhr.responseText === 'repeat' && retries > 0) {\n");
+      sb.append("               window.setTimeout(function () {fetch(retries - 1);}, 200);\n");
+      sb.append("            } else if (xhr.responseText === 'repeat') {\n");
+      sb.append("               document.getElementById('" + asyncId + "').innerHTML += '<p>Too many retries.</p>';\n");
+      sb.append("               document.getElementById('" + asyncId + "').id = '" + resId + "';\n");
+      sb.append("            } else if (xhr.responseText === '') {\n");
+      sb.append("               document.getElementById('" + asyncId + "').innerHTML += '</p>Empty response.</p>';\n");
+      sb.append("               document.getElementById('" + asyncId + "').id = '" + resId + "';\n");
+      sb.append("            } else {\n");
+      sb.append("               document.getElementById('" + asyncId + "').innerHTML=xhr.responseText;\n");
+      sb.append("            }\n");
+      sb.append("         }\n");
+      sb.append("      }\n");
+      sb.append("   };\n");
+      sb.append("   xhr.open('" + method + "', '" + urlstr + "',true);\n");
+      
+      
+      for (String key : headers.keySet()) {
+         sb.append("   xhr.setRequestHeader('" + key + "', '" + headers.get(key) + "');\n");
+      }
+      
+      if (body == null || body.isEmpty()) {
+         sb.append("   xhr.send();\n");
+      } else {
+         sb.append("   xhr.send('" + body + "');\n");
+      }
+      
+      sb.append("})(5);\n");
+      sb.append("</script>\n");
+
+      writer.write(sb.toString());
+   }
+
 }

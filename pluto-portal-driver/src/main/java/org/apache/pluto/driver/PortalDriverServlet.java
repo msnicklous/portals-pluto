@@ -49,6 +49,7 @@ import org.apache.pluto.driver.services.portal.PortletWindowConfig;
 import org.apache.pluto.driver.url.PortalURL;
 import org.apache.pluto.driver.url.PortalURL.URLType;
 import org.apache.pluto.driver.util.PageState;
+import org.apache.pluto.driver.util.RenderData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -164,23 +165,21 @@ public class PortalDriverServlet extends HttpServlet {
                break;
             case PartialAction:
                container.doAction(portletWindow, request, response, false);
-
-               // The page state is made available to the ResourceRequest by
-               // passing
-               // it through all layers, which allows for special case
-               // processing at
-               // some points.
-
-               ps = new PageState(request);
+               Map<String, RenderData> renderDataMap = new HashMap<String, RenderData>();
+               PartialActionResponse partialActionResponse = new PartialActionResponse(response);
+               container.doServeResource(portletWindow, request, partialActionResponse);
+               String pid = portletWindow.getId().getStringId();
+               renderDataMap.put(pid, partialActionResponse.getRenderData());
+               ps = new PageState(request, renderDataMap);
                jsondata = ps.toJSONString();
-               if (LOG.isDebugEnabled()) {
-                  LOG.debug("Partial Action: dump page state:\n" + jsondata);
-               }
+               LOG.debug("Ajax Action: returning new page state to client: " + jsondata);
+               response.setContentType("application/json");
+               Writer responseWriter = response.getWriter();
+               responseWriter.write(jsondata);
 
-               container.doServeResource(portletWindow, request, response, jsondata);
                break;
             case Resource:
-               container.doServeResource(portletWindow, request, response, null);
+               container.doServeResource(portletWindow, request, response);
                break;
             default:
                LOG.warn("Unknown request: " + reqType);
@@ -222,6 +221,7 @@ public class PortalDriverServlet extends HttpServlet {
             LOG.debug("Executing header requests for target portlets.");
          }
 
+         response.setContentType("text/html;charset=UTF-8");
          doHeaders(request, response, portalURL);
 
          if (LOG.isDebugEnabled()) {
@@ -266,9 +266,17 @@ public class PortalDriverServlet extends HttpServlet {
 
       for (String pid : purl.getPortletIds()) {
 
-         PortletWindowConfig wcfg = PortletWindowConfig.fromId(pid);
-         PortletWindowImpl pwin = new PortletWindowImpl(container, wcfg, purl);
          HeaderData hd = null;
+         PortletWindowConfig wcfg = null;
+         PortletWindowImpl pwin = null;
+         try {
+            wcfg = PortletWindowConfig.fromId(pid);
+            pwin = new PortletWindowImpl(container, wcfg, purl);
+         } catch (Throwable e) {
+            LOG.warn("Could not retrieve configuration for portlet ID: " + pid);
+            continue;
+         }
+         
 
          try {
 
@@ -309,7 +317,8 @@ public class PortalDriverServlet extends HttpServlet {
                // handle markup for document head section
                markup.append(hd.getHeadSectionMarkup()).append("\n");
 
-               // add the cookies to the response
+               // add the cookies & http headers to the response
+               
                List<Cookie> cookies = hd.getCookies();
                for (Cookie c : cookies) {
                   resp.addCookie(c);

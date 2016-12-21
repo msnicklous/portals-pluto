@@ -24,25 +24,34 @@ package javax.portlet.tck.constants;
 public class Constants {
    public static final String BR = "<br/>";
    public static final String HR = "<hr/>";
+   public static final String ASYNC_ID = "-async";
    public static final String RESULT_ID = "-result";
    public static final String DETAIL_ID = "-detail";
    public static final String CLICK_ID = "-clickme";
    public static final String SETUP_ID = "-setup";
+   public static final String NOTREADY_ID = "-notready";
    public static final String RESOURCE_LINK_ID = "-reslink";
    public static final String RESOURCE_DIV_ID = "-resdiv";
+   public static final String WAITING = "Waiting for results";
    public static final String SUCCESS = "Succeeded";
    public static final String FAILURE = "Failed";
    public static final String BUTTON_PARAM_NAME="inputval";
+   
+   // Render parameter name for redirect testing
+   public static final String TCKPAGE = "tckPage";
    
    // for session attributes passing info between phases
    public static final String RESULT_ATTR_PREFIX = "attr.result.";
    
    // For generating the target for the getRequestDispatcher call
    // target = <prefix> + <servlet/jsp name> + <suffix> + ? + <query string> 
+   public static final String SERVLET_INCFWD = "/IncluderForwarderServlet";
    public static final String SERVLET_PREFIX = "/";
    public static final String SERVLET_SUFFIX = "";
    public static final String JSP_PREFIX = "/WEB-INF/jsp/";
    public static final String JSP_SUFFIX = ".jsp";
+   public static final String EXTRA_PATH = "/extra/path";
+   public static final String EXTRA_QUERY_STRING = "eqparm1=eqvalue1";
    public static final String QUERY_STRING = "qparm1=qvalue1&qparm2=qvalue2";
    
    // for several tests to servlet / jsp for comparison

@@ -47,12 +47,16 @@ class InstallationDependency {
     }
 
     public static final InstallationDependency PORTLET_API =
-        new InstallationDependency("org.apache.portals.pluto", "portlet-api", 
+        new InstallationDependency("javax.portlet", "portlet-api", 
                 VERSION_PROPERTIES.getProperty("portals.portlet-api.version"));
 
     public static final InstallationDependency CDI_IMPL =
         new InstallationDependency("org.jboss.weld.servlet", "weld-servlet", 
                 VERSION_PROPERTIES.getProperty("cdi.version"));
+
+    public static final InstallationDependency ANNOTATION_DETECTOR =
+        new InstallationDependency("eu.infomas", "annotation-detector", 
+                VERSION_PROPERTIES.getProperty("annotation-detector.version"));
 
     public static final InstallationDependency SLF4J_API =
         new InstallationDependency("org.slf4j", "slf4j-api", 
@@ -150,6 +154,7 @@ class InstallationDependency {
         SHARED.add(TAGLIB);
         SHARED.add(CCPP_API);
         SHARED.add(CDI_IMPL);
+        SHARED.add(ANNOTATION_DETECTOR);
         SHARED.add(SLF4J_API);
         SHARED.add(SLF4J_IMPL);
     }

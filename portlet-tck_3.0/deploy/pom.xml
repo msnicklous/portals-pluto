@@ -1,4 +1,4 @@
-<!--
+<?xml version="1.0" encoding="UTF-8"?><!--
     Licensed to the Apache Software Foundation (ASF) under one
     or more contributor license agreements.  See the NOTICE file
     distributed with this work for additional information
@@ -15,14 +15,12 @@
     KIND, either express or implied.  See the License for the
     specific language governing permissions and limitations
     under the License.     
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+--><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
 		<groupId>javax.portlet</groupId>
-		<artifactId>tck</artifactId>
+		<artifactId>portlet-tck</artifactId>
 		<version>3.0-SNAPSHOT</version>
 	</parent>
 
@@ -144,12 +142,6 @@
       <dependency>
          <groupId>${project.groupId}</groupId>
          <artifactId>tck-V2AddlResponseTests</artifactId>
-         <version>${project.version}</version>
-         <type>war</type>
-      </dependency>
-      <dependency>
-         <groupId>${project.groupId}</groupId>
-         <artifactId>tck-V2AddlUrlTests</artifactId>
          <version>${project.version}</version>
          <type>war</type>
       </dependency>
@@ -291,6 +283,80 @@
          <version>${project.version}</version>
          <type>war</type>
       </dependency>
+
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletContextTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+	  <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3URLTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+	  <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3RenderStateTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>tck-V3PortletConfigTests</artifactId>
+            <version>${project.version}</version>
+            <type>war</type>
+        </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3HeaderPortletTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletParametersTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletArtifactValidityTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletApplicationConfigTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletAppConfigOverrideTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3AnnotationPortletConfigTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3PortletHubTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+      <dependency>
+         <groupId>${project.groupId}</groupId>
+         <artifactId>tck-V3ResourceAsyncTests</artifactId>
+         <version>${project.version}</version>
+         <type>war</type>
+      </dependency>
+
       <dependency>
          <groupId>${project.groupId}</groupId>
          <artifactId>tck-driver</artifactId>
@@ -304,15 +370,11 @@
 
       <resources>
          <resource>
-            <directory>${project.build.directory}/generated-resources/xml/final</directory>
-            <targetPath>${project.build.directory}/deploy-files</targetPath>
+            <directory>target/generated-resources/xml/final</directory>
+            <targetPath>../deploy-files</targetPath>
             <includes>
                <include>*.xml</include>
             </includes>
-         </resource>
-         <resource>
-            <directory>src/main/resources/css</directory>
-            <targetPath>${project.build.directory}/deploy-files</targetPath>
          </resource>
       </resources>
 
@@ -349,6 +411,17 @@
 					</execution>
 				</executions>
 			</plugin>
+
+         <plugin>
+            <groupId>org.apache.rat</groupId>
+            <artifactId>apache-rat-plugin</artifactId>
+            <configuration>
+               <excludes>
+                  <exclude>.externalToolBuilders/Maven_Ant_Builder.launch</exclude>
+                  <exclude>maven-eclipse.xml</exclude>
+               </excludes>
+            </configuration>
+         </plugin>
 		</plugins>
 	</build>
 

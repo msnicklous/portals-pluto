@@ -24,6 +24,8 @@ import static org.apache.pluto.container.bean.processor.MethodDescription.METH_E
 import static org.apache.pluto.container.bean.processor.MethodDescription.METH_HDR;
 import static org.apache.pluto.container.bean.processor.MethodDescription.METH_REN;
 import static org.apache.pluto.container.bean.processor.MethodDescription.METH_RES;
+import static org.apache.pluto.container.bean.processor.MethodDescription.METH_DES;
+import static org.apache.pluto.container.bean.processor.MethodDescription.METH_INI;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -42,8 +44,10 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.portlet.PortletException;
 import javax.portlet.PortletSession;
 import javax.portlet.annotations.ActionMethod;
+import javax.portlet.annotations.DestroyMethod;
 import javax.portlet.annotations.EventMethod;
 import javax.portlet.annotations.HeaderMethod;
+import javax.portlet.annotations.InitMethod;
 import javax.portlet.annotations.PortletSerializable;
 import javax.portlet.annotations.PortletSessionScoped;
 import javax.portlet.annotations.RenderMethod;
@@ -80,6 +84,18 @@ public class PortletAnnotationRecognizer extends AnnotationRecognizer {
       
       ArrayList<MethodDescription> list;
       MethodDescription md;
+
+      // Add method definitions for init methods
+      
+      list = new ArrayList<MethodDescription>();
+      list.add(METH_INI);
+      descriptions.put(InitMethod.class, list);
+      
+      // Add method definitions for destroy methods
+      
+      list = new ArrayList<MethodDescription>();
+      list.add(METH_DES);
+      descriptions.put(DestroyMethod.class, list);
       
       // Add method definitions for action methods
       
@@ -294,6 +310,12 @@ public class PortletAnnotationRecognizer extends AnnotationRecognizer {
          ServeResourceMethod tcc = (ServeResourceMethod) anno;
          portletNames.addAll(Arrays.asList(tcc.portletNames()));
          dispatchId = tcc.resourceID();
+      } else if (anno instanceof DestroyMethod) {
+         DestroyMethod tcc = (DestroyMethod) anno;
+         portletNames.add(tcc.value());
+      } else if (anno instanceof InitMethod) {
+         InitMethod tcc = (InitMethod) anno;
+         portletNames.add(tcc.value());
       } else {
          StringBuilder txt = new StringBuilder(128);
          txt.append("Unrecognized method annotation: ")
@@ -362,49 +384,7 @@ public class PortletAnnotationRecognizer extends AnnotationRecognizer {
     *                                     beans cannot be instantiated.
     */
    @Override
-   protected void activateDeployment(BeanManager bm) {
-      
-      // Verify the portlet names in the proxied method store. It is an error if:
-      // 1) There is no method for a given name, but configuration data exists
-      
-      Set<String> names = ams.getPortletNames();
-      names.remove("*");
-      for (String name : names) {
-         StringBuilder txt = new StringBuilder(128);
-         Set<MethodIdentifier> meths = ams.getMethodIDsForPortlet(name);
-         if (meths.isEmpty()) {
-            txt.append("No methods exist for portlet.");
-            txt.append(" Portlet name: ").append(name);
-         }
-         if (txt.length() > 0) {
-            LOG.debug(txt.toString());
-            summary.addErrorString(name, txt.toString());
-         }
-      }
-      
-      // See if there is a portlet with a wild-card character. If so, then:
-      // 1) Create set of names of portlets without errors
-      // 2) replicate the method identifiers to cover all other portlet names
-      
-      Set<MethodIdentifier> mis = ams.getMethodIDsForPortlet("*");
-      if (!mis.isEmpty()) {
-         names = ams.getPortletNames();
-         names.removeAll(summary.getPortletsWithErrors());
-         names.remove("*");
-         for (MethodIdentifier mi : mis) {
-            List<AnnotatedMethod> meths = ams.getMethods(mi);
-            for (String name : names) {
-               MethodIdentifier newMi = new MethodIdentifier(name, mi.getId(), mi.getType());
-               for (AnnotatedMethod meth : meths) {
-                  ams.addMethod(newMi, meth);
-               }
-            }
-         }
-      }
-      
-      // Now activate the methods by providing a BeanManager to the store.
-      
-      ams.activateMethods(bm);
+   protected void activateCustomScopes(BeanManager bm) {
       
       // Activate the custom scoped beans
       stateScopedConfig.activate(bm);

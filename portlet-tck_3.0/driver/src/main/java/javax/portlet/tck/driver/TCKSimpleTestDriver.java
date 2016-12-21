@@ -37,7 +37,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -45,7 +44,10 @@ import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.htmlunit.HtmlUnitDriver;
 import org.openqa.selenium.ie.InternetExplorerDriver;
+import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.safari.SafariDriver;
+import org.openqa.selenium.phantomjs.PhantomJSDriver;
+import org.openqa.selenium.phantomjs.PhantomJSDriverService;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -62,16 +64,19 @@ public class TCKSimpleTestDriver {
    private static String loginUrl, host, port, testFile, browser, 
    username, usernameId, password, passwordId, testContextBase, module;
    private static int timeout = 3; // for waiting on page load
-   private static boolean useGeneratedUrl = true, debug = false;
+   private static boolean useGeneratedUrl = true, debug = false, dryrun = false;
 
    private static WebDriver driver;
    private String page, tcName;
+   
+   private List<String> debugLines = new ArrayList<>();
 
    /**
     * Reads the consolidated list of test cases and provides the list to Junit
     * for parameterized testing.
     * @return  a Collection of test cases to run
     */
+   @SuppressWarnings("rawtypes")
    @Parameters
    public static Collection getTestList () {
       System.out.println("getTestList");
@@ -79,6 +84,11 @@ public class TCKSimpleTestDriver {
       System.out.println("   TestFile=" + testFile);
       module = System.getProperty("test.module");
       System.out.println("   Module       =" + module);
+      
+      String ignoreFile = System.getProperty("test.ignore.list.file");
+      System.out.println("   Ignore file  =" + ignoreFile);
+      boolean doIgnore = new Boolean(System.getProperty("test.ignore"));
+      System.out.println("   Ignore TCs   =" + doIgnore);
       
       boolean filterTCs = (module != null && module.length() > 0);
       boolean excTCs = true;        // include or exclude TCs
@@ -99,6 +109,19 @@ public class TCKSimpleTestDriver {
          e.printStackTrace();
          return null;
       }
+
+      Properties ignoredTCs = new Properties();
+      if (doIgnore) {
+         try {
+            FileInputStream fis = new FileInputStream(ignoreFile);
+            ignoredTCs.loadFromXML(fis);
+         } catch (Exception e) {
+            System.out.println("Could not read test cases file. Attempted to read file " + ignoreFile);
+            e.printStackTrace();
+            return null;
+         }
+      }
+      System.out.println("   # ignore TCs =" + ignoredTCs.size());
       
       // See if performance can be improved by sorting the test cases by
       // the page to be accessed. The map uses the page as key and has a 
@@ -107,6 +130,8 @@ public class TCKSimpleTestDriver {
       
       TreeMap<String, Set<String>> pages = new TreeMap<String, Set<String>>();
       Set<Object> tcs = tprops.keySet();
+      
+      tcloop:
       for (Object o : tcs) {
          String tcase = (String) o ;
          String tpage = tprops.getProperty(tcase);
@@ -114,6 +139,15 @@ public class TCKSimpleTestDriver {
             boolean c = tcase.contains(filterStr);
             if (excTCs && c) continue;       // exclude matches
             if (!excTCs && !c) continue;     // exclude non-matches
+         }
+         // handle ignore list
+         if (doIgnore) {
+            for (Object itc : ignoredTCs.keySet()) {
+               if (tcase.equalsIgnoreCase((String)itc)) {
+                  System.out.println("   Ignoring     :" + tcase);
+                  continue tcloop;
+               }
+            }
          }
          if (!pages.containsKey(tpage)) {
             pages.put(tpage, new TreeSet<String>());
@@ -133,7 +167,7 @@ public class TCKSimpleTestDriver {
       
       int numP = pages.size();
       int numTC = tests.size();
-      System.out.println("Executing " + numTC + " tests on " + numP + "pages.");
+      System.out.println("Executing " + numTC + " tests on " + numP + " pages.");
 
       return tests;
    }
@@ -175,11 +209,13 @@ public class TCKSimpleTestDriver {
       str = System.getProperty("test.debug");
       debug = str.equalsIgnoreCase("true");
       str = System.getProperty("test.timeout");
+      dryrun = new Boolean(System.getProperty("test.dryrun"));
       timeout = ((str != null) && str.matches("\\d+")) ? Integer.parseInt(str) : 3; 
       String wd = System.getProperty("test.browser.webDriver");
 
       System.out.println("before class.");
       System.out.println("   Debug        =" + debug);
+      System.out.println("   Dryrun       =" + dryrun);
       System.out.println("   Timeout      =" + timeout);
       System.out.println("   Login URL    =" + loginUrl);
       System.out.println("   Host         =" + host);
@@ -201,19 +237,12 @@ public class TCKSimpleTestDriver {
       } else if (browser.equalsIgnoreCase("chrome")) {
          System.setProperty("webdriver.chrome.driver", wd);
          driver = new ChromeDriver();
+      } else if (browser.equalsIgnoreCase("phantomjs")) {
+         DesiredCapabilities capabilities = DesiredCapabilities.phantomjs();
+         capabilities.setJavascriptEnabled(true);
+         capabilities.setCapability(PhantomJSDriverService.PHANTOMJS_EXECUTABLE_PATH_PROPERTY, wd);
+         driver = new PhantomJSDriver(capabilities);
       } else if (browser.equalsIgnoreCase("htmlUnit")) {
-        /*
-         * PhantomJs Headless browser - Use if the default headless browser of Selenium is not working.
-         * In order to use - 
-         *   1. Download PhantomJs - http://phantomjs.org/download.html
-         *   2. Uncomment the dependency in pom.xml
-         *   3. Insert this code - 
-         *        DesiredCapabilities capabilities = DesiredCapabilities.phantomjs();
-                  capabilities.setJavascriptEnabled(true);
-                  capabilities.setCapability(PhantomJSDriverService.PHANTOMJS_EXECUTABLE_PATH_PROPERTY,"your custom path to downloaded bin\\phantomjs.exe");
-                  driver = new PhantomJSDriver(capabilities);
-         *   4. Comment-out driver = new HtmlUnitDriver(true);
-         */
         driver = new HtmlUnitDriver(true);
       } else if (browser.equalsIgnoreCase("safari")) {
          driver = new SafariDriver();
@@ -221,7 +250,9 @@ public class TCKSimpleTestDriver {
          throw new Exception("Unsupported browser: " + browser);
       }
 
-      login();
+      if (!dryrun) {
+         login();
+      }
 
    }
 
@@ -233,7 +264,7 @@ public class TCKSimpleTestDriver {
       if (driver != null) {
          driver.quit();
       }
-      if (debug) System.out.println("   after class.");
+      System.out.println("   after class.");
    }
 
    /**
@@ -241,7 +272,7 @@ public class TCKSimpleTestDriver {
     */
    @Before
    public void setUp() throws Exception {
-      if (debug) System.out.println("   before test.");
+      debugLines.add("   before test.");
    }
 
    /**
@@ -249,15 +280,21 @@ public class TCKSimpleTestDriver {
     */
    @After
    public void tearDown() throws Exception {
-      if (debug) System.out.println("   after test.");
+      debugLines.add("   after test.");
+      if (debug) {
+         for (String line : debugLines) {
+            System.out.println(line);
+         }
+      }
    }
 
    @Test
    public void test() {
-      if (debug) System.out.println("   execute test.");
-      String actionId = tcName + Constants.CLICK_ID;
-      String resultId = tcName + Constants.RESULT_ID;
-      String detailId = tcName + Constants.DETAIL_ID;
+      debugLines.add("   execute test.");
+      
+      if (dryrun) {
+         return;
+      }
 
       try {
 
@@ -265,15 +302,18 @@ public class TCKSimpleTestDriver {
          // First look for the test results or links already being present on the page. 
 
          List<WebElement> wels = driver.findElements(By.name(tcName));
-         if (debug) System.out.println("   TC elements already on page: " + !wels.isEmpty() + ", tcname===" + tcName + "===");
+         debugLines.add("   TC elements already on page: " + !wels.isEmpty() + ", tcname===" + tcName + "===");
          if (wels.isEmpty()) {
             wels = accessPage();
          }
          
          // process links if present
          wels = processClickable(wels);
-         if (debug) System.out.println("   After processing clickable, results found: " + !wels.isEmpty());
+         debugLines.add("   After processing clickable, results found: " + !wels.isEmpty());
 
+         // wait for any async JavaScript tests to complete
+         processAsync();
+         
          checkResults(wels);
 
       } catch(Exception e) {
@@ -281,14 +321,13 @@ public class TCKSimpleTestDriver {
          // Some type of unexpected error occurred, so generate text
          // and mark the TC as failed.
          
-         List<WebElement> bels = driver.findElements(By.tagName("body"));
-         String err = "";
-         if (!bels.isEmpty()) {
-            err = bels.get(0).getText();
+         System.out.println("   Exception occurred: " + e.getMessage());
+         for (String line : debugLines) {
+            System.out.println(line);
          }
+         
          assertTrue("Test case " + tcName + " failed. " +  
-               " Setup link could not be accessed. \nException: " + e.toString() +
-               "\nPage text: " + err, false);
+               " Setup link could not be accessed. \nException: " + e.toString(), false);
       }
    }
 
@@ -300,10 +339,11 @@ public class TCKSimpleTestDriver {
     */
    private List<WebElement> accessPage() throws Exception {
       List<WebElement> wels = driver.findElements(By.linkText(page));
-      if (debug) System.out.println("   Access page, link found: " + !wels.isEmpty() + ", page===" + page + "===");
+      debugLines.add("   Access page, link found: " + !wels.isEmpty() + ", page===" + page + "===");
      
       if (wels.isEmpty()) {
          // retry through login page
+         debugLines.add("   logging in ... ");
          login();
          wels = driver.findElements(By.linkText(page));
          if (wels.isEmpty()) {
@@ -335,6 +375,7 @@ public class TCKSimpleTestDriver {
       // If there is no login or password fields, don't need to login.
       if (!uels.isEmpty() && !pwels.isEmpty()) {
 
+         System.out.println("   No userid / password fields");
          WebElement userEl = uels.get(0);
          WebElement pwEl = pwels.get(0);
 
@@ -352,24 +393,21 @@ public class TCKSimpleTestDriver {
    private void checkResults(List<WebElement> tcels) {
       String resultId = tcName + Constants.RESULT_ID;
       String detailId = tcName + Constants.DETAIL_ID;
+
+      debugLines.add("   Checking results, #TC elements: " + tcels.size());
+
+      List<WebElement> rels = driver.findElements(By.id(resultId)); 
+      List<WebElement> dels = driver.findElements(By.id(detailId)); 
       
-      List<WebElement> rels = null;
-      List<WebElement> dels = null;
-      if (debug) System.out.println("   Checking results, #TC elements: " + tcels.size());
-      for (WebElement wel : tcels) {
-         rels = wel.findElements(By.id(resultId));
-         dels = wel.findElements(By.id(detailId));
-         if (!rels.isEmpty() && !dels.isEmpty()) break;
-      }
-      
-      if (!rels.isEmpty() && !dels.isEmpty()) {
+      if (!rels.isEmpty()) {
          String res = rels.get(0).getText();
-         String det = "Test case " + tcName + ": " + dels.get(0).getText();
+         String det = "Test case " + tcName + ": ";
+         det += dels.isEmpty() ? "No details provided." : dels.get(0).getText(); 
          boolean ok = res.contains(Constants.SUCCESS);
-         if (debug) System.out.println("   Test OK: " + ok + ", results: " + res + ", details: " + det);
+         debugLines.add("   Test OK: " + ok + ", results: " + res + ", details: " + det);
          assertTrue(det, ok);
       } else {
-         if (debug) System.out.println("   Results not found");
+         debugLines.add("   Results not found");
          assertTrue("Test case " + tcName + " failed. Results could not be found.", false);
       }
    }
@@ -389,33 +427,43 @@ public class TCKSimpleTestDriver {
       String actionId = tcName + Constants.CLICK_ID;
       String resultId = tcName + Constants.RESULT_ID;
       String detailId = tcName + Constants.DETAIL_ID;
+      String asyncId = tcName + Constants.ASYNC_ID;
+      String notreadyId = tcName + Constants.NOTREADY_ID;
       List<WebElement> tcels = null;
 
       for (WebElement wel : wels) {
          tcels = wel.findElements(By.id(setupId));
          if (!tcels.isEmpty()) break;
       }
-      if (debug) System.out.println("   Setup link found: " + ((tcels != null) && !tcels.isEmpty()));
+      debugLines.add("   Setup link found: " + ((tcels != null) && !tcels.isEmpty()));
+      
+      // If were dealing with async, make sure the JavaScript is initialized
+      List<WebElement> acels = driver.findElements(By.id(asyncId));
+      debugLines.add("   Async elements found: " + ((acels != null) && !acels.isEmpty()));
+      if (acels != null && !acels.isEmpty()) {
+         WebDriverWait wdw = new WebDriverWait(driver, timeout);
+         wdw.until(ExpectedConditions.invisibilityOfElementLocated(By.id(notreadyId)));
+         debugLines.add("   Async elements are now ready.");
+      }
 
       // Click setup link if found
       if ((tcels != null) && !tcels.isEmpty()) {
          WebElement wel = tcels.get(0);
          wel.click();
-         if (debug) System.out.println("   Clicked setup link.");
+         debugLines.add("   Clicked setup link.");
 
          WebDriverWait wdw = new WebDriverWait(driver, timeout);
 
          String expr = "//*[@id='" + resultId + "'] | //*[@id='" + actionId + "']";
-         if(debug) System.out.println("   xpath string: ===" + expr + "===");
+         debugLines.add("   xpath string: ===" + expr + "===");
 
          wdw.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.xpath(expr)));
          wels = driver.findElements(By.name(tcName));
-         if (debug) {
-            System.out.println("   Found elements: " + (!wels.isEmpty()));
-            List<WebElement> xels = driver.findElements(By.xpath(expr));
-            for (WebElement w : xels) {
-               System.out.println("      Element: " + w.getTagName() + ", id=" + w.getAttribute("id"));
-            }
+         
+         debugLines.add("   Found elements: " + (!wels.isEmpty()));
+         List<WebElement> xels = driver.findElements(By.xpath(expr));
+         for (WebElement w : xels) {
+            debugLines.add("      Element: " + w.getTagName() + ", id=" + w.getAttribute("id"));
          }
       }
       
@@ -424,7 +472,7 @@ public class TCKSimpleTestDriver {
          tcels = wel.findElements(By.id(actionId));
          if (!tcels.isEmpty()) break;
       }
-      if (debug) System.out.println("   Clickable link found: " + ((tcels != null) && !tcels.isEmpty()));
+      debugLines.add("   Clickable link found: " + ((tcels != null) && !tcels.isEmpty()));
       
       if (tcels != null && !tcels.isEmpty()) {
          WebElement wel = tcels.get(0);
@@ -439,6 +487,37 @@ public class TCKSimpleTestDriver {
       
 
       return wels;
+   }
+
+   /**
+    * Looks for an async element on the page. The async element will be filed in 
+    * with results by the test case JavaScript code, which runs asynchronously.  
+    * 
+    * If an async element is found, this function waits the timeout period to 
+    * let the async test case code update the results.
+    * 
+    * @return  <code>true</code> if async was handled; <code>false</code> otherwise.
+    * @throws Exception 
+    */
+   private boolean processAsync() throws Exception {
+      String asyncId = tcName + Constants.ASYNC_ID;
+      String resultId = tcName + Constants.RESULT_ID;
+
+      List<WebElement> tcels = null;
+
+      tcels = driver.findElements(By.id(asyncId));
+
+      debugLines.add("   Element with async id=" + asyncId + " found: " + !tcels.isEmpty());
+      
+      if (tcels.isEmpty()) {
+         // no async element
+         return false;
+      }
+
+      WebDriverWait wdw = new WebDriverWait(driver, timeout);
+      wdw.until(ExpectedConditions.visibilityOfElementLocated(By.id(resultId)));
+
+      return true;
    }
 
 }

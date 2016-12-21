@@ -1,3 +1,21 @@
+/*  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
 package org.apache.pluto.container.bean.processor;
 
 import java.lang.annotation.Annotation;
@@ -8,7 +26,13 @@ import java.util.Set;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class AnnotatedMethod {
+   private static final Logger LOG = LoggerFactory.getLogger(AnnotatedMethod.class);
+   private static final boolean isTrace = LOG.isTraceEnabled();
+   
    
    private final Class<?>           beanClass; 
    private final Method             meth;
@@ -83,16 +107,34 @@ public class AnnotatedMethod {
    }
 
    /**
+    * @return the beanClass
+    */
+   public Class<?> getBeanClass() {
+      return beanClass;
+   }
+
+   /**
     * The annotated method is activated by using the specified BeanManager to
     * obtain a reference to a bean that can be used for method invocation.
     * 
-    * @param bm   The BeanManager
+    * @param bm   The BeanManager, may be null if non-bean class
     */
    public void activate(BeanManager bm) {
+      
       beanMgr = bm;
-      Set<Bean<?>> beans = bm.getBeans(beanClass);
-      bean = bm.resolve(beans);
-      assert bean != null;
+      if (bm != null) {
+         Set<Bean<?>> beans = bm.getBeans(beanClass);
+         bean = bm.resolve(beans);
+         assert bean != null;
+      }
+      
+      if (isTrace) {
+         StringBuilder txt = new StringBuilder(128);
+         txt.append("ID: ").append(toString());
+         txt.append(", beanMgr == null?: ").append(beanMgr == null);
+         txt.append(", bean == null?: ").append(bean == null);
+         LOG.trace(txt.toString());
+      }
    }
    
    /**
@@ -102,6 +144,15 @@ public class AnnotatedMethod {
     * @param beanInstance
     */
    public void setPortletClassInstance(Object beanInstance) {
+      
+      if (isTrace) {
+         StringBuilder str = new StringBuilder();
+         str.append("Updating class instance.");
+         str.append(", bean class: ").append(beanClass.getCanonicalName());
+         str.append(", instance: ").append((beanInstance == null) ? "null" : "not null");
+         LOG.debug(str.toString());
+      }
+
       this.beanInstance = beanInstance;
       this.isPortletClass = true;
    }
@@ -121,8 +172,18 @@ public class AnnotatedMethod {
       if (!isPortletClass) {
          // get the reference for beans other than portlet classes in order to respect the 
          // scope of the bean.
+         
+         if (isTrace) {
+            StringBuilder txt = new StringBuilder();
+            txt.append("ID: ").append(toString());
+            txt.append(", beanMgr == null?").append(beanMgr == null);
+            txt.append(", bean == null?").append(bean == null);
+            LOG.trace(txt.toString());
+         }
+         
          beanInstance = beanMgr.getReference(bean, bean.getBeanClass(), beanMgr.createCreationalContext(bean));
       }
+
       return meth.invoke(beanInstance, args);
    }
 

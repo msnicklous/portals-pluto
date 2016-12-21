@@ -19,17 +19,14 @@
 package org.apache.pluto.container.driver;
 
 import java.io.InputStream;
-import java.util.EnumSet;
 import java.util.Set;
 
 import javax.portlet.annotations.PortletApplication;
 import javax.portlet.annotations.PortletConfiguration;
 import javax.portlet.annotations.PortletConfigurations;
+import javax.portlet.annotations.PortletLifecycleFilter;
 import javax.portlet.annotations.PortletListener;
 import javax.portlet.annotations.PortletPreferencesValidator;
-import javax.portlet.annotations.PortletLifecycleFilter;
-import javax.servlet.DispatcherType;
-import javax.servlet.FilterRegistration;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
@@ -38,8 +35,6 @@ import javax.servlet.ServletRegistration;
 import javax.servlet.annotation.HandlesTypes;
 
 import org.apache.pluto.container.PortletInvokerService;
-import org.apache.pluto.container.bean.processor.AnnotatedConfigBean;
-import org.apache.pluto.container.bean.processor.PortletCDIExtension;
 import org.apache.pluto.container.om.portlet.PortletDefinition;
 import org.apache.pluto.container.om.portlet.impl.ConfigurationHolder;
 import org.slf4j.Logger;
@@ -77,23 +72,13 @@ public class PortletContainerInitializer implements ServletContainerInitializer 
 
       try {
 
-         // Get the bean configuration from the CDI extension
-
-         AnnotatedConfigBean acb = PortletCDIExtension.getConfig();
-         if (acb == null) {
-            StringBuilder txt = new StringBuilder();
-            txt.append("The managed bean configuration could not be obtained. \n\nMake sure Tomcat is configured correctly.");
-            txt.append("\nVerify that the CDI implementation is available and configured to run before the Pluto portlet container initializer.");
-            txt.append("\nVerify that the file 'weld-servlet-2.3.1.Final.jar' is in the ${catalina.base}/lib directory.");
-            txt.append("\nVerify that the catalina.properties file contains a line similar to:.");
-            txt.append("\n   common.loader=\"${catalina.home}/lib/weld-servlet-2.3.1.Final.jar\",\"${catalina.base}/lib\",\"${catalina.base}/lib/*.jar\",\"${catalina.home}/lib\",\"${catalina.home}/lib/*.jar\"");
-            txt.append("\n");
-            LOG.warn(txt.toString());
-         }
+         
+         // scan for method annotations
+         
+         ConfigurationHolder holder = new ConfigurationHolder();
+         holder.scanMethodAnnotations(ctx);
 
          // Read the annotated configuration
-
-         ConfigurationHolder holder = new ConfigurationHolder();
 
          if (classes != null) {
             holder.processConfigAnnotations(classes);
@@ -106,7 +91,7 @@ public class PortletContainerInitializer implements ServletContainerInitializer 
 
          if (isDebug) {
             StringBuilder txt = new StringBuilder(128);
-            txt.append("§§§ ServletContainerInitializer. ctx path: ").append(
+            txt.append("$$$ ServletContainerInitializer. ctx path: ").append(
                   ctx.getContextPath());
             txt.append(", servlet ctx name: ").append(ctx.getServletContextName());
             txt.append(", # portlet annotations: ").append(
@@ -130,12 +115,9 @@ public class PortletContainerInitializer implements ServletContainerInitializer 
 
          holder.validate();
          
-         // If we were able to obtain a bean config, reconcile the bean config with the
-         // explicitly declared portlet configuration.
+         // Reconcile the bean config with the explicitly declared portlet configuration.
          
-         if (acb != null) {
-            holder.reconcileBeanConfig(acb.getMethodStore());
-         }
+         holder.reconcileBeanConfig();
          
          // If portlets have been found in this servlet context, launch the portlet servlets
 
@@ -161,7 +143,7 @@ public class PortletContainerInitializer implements ServletContainerInitializer 
                ServletRegistration.Dynamic sr = ctx.addServlet(servletName, PortletServlet3.class);
                sr.addMapping(mapping);
                sr.setInitParameter(PortletServlet3.PORTLET_NAME, pn);
-               sr.setAsyncSupported(pd.isAsyncSupported());
+               sr.setAsyncSupported(true);
                if (pd.isMultipartSupported()) {
                   MultipartConfigElement mce = new MultipartConfigElement(pd.getLocation(), 
                         pd.getMaxFileSize(), pd.getMaxRequestSize(), pd.getFileSizeThreshold());
@@ -173,14 +155,14 @@ public class PortletContainerInitializer implements ServletContainerInitializer 
             
             // Add the cross-context filter & terminal listener
             
-            FilterRegistration.Dynamic fr = ctx.addFilter("WeldCrossContextFilter", "org.jboss.weld.servlet.WeldCrossContextFilter");
-            EnumSet<DispatcherType> dt = EnumSet.noneOf(DispatcherType.class);
-            dt.add(DispatcherType.FORWARD);
-            dt.add(DispatcherType.INCLUDE);
-            dt.add(DispatcherType.ERROR);
-            fr.addMappingForUrlPatterns(dt, false, "/*");
-            
-            ctx.addListener("org.jboss.weld.servlet.WeldTerminalListener");
+//             FilterRegistration.Dynamic fr = ctx.addFilter("WeldCrossContextFilter", "org.jboss.weld.servlet.WeldCrossContextFilter");
+//             EnumSet<DispatcherType> dt = EnumSet.noneOf(DispatcherType.class);
+//             dt.add(DispatcherType.FORWARD);
+//             dt.add(DispatcherType.INCLUDE);
+//             dt.add(DispatcherType.ERROR);
+//             fr.addMappingForUrlPatterns(dt, false, "/*");
+//             
+//             ctx.addListener("org.jboss.weld.servlet.WeldTerminalListener");
 
             LOG.debug("Completed deployment of servlets & filters for context: " + ctx.getContextPath());
 

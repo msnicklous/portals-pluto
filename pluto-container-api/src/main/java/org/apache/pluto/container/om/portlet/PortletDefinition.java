@@ -18,6 +18,9 @@ package org.apache.pluto.container.om.portlet;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+
+import javax.portlet.PortletMode;
 
 public interface PortletDefinition {
     
@@ -60,6 +63,8 @@ public interface PortletDefinition {
    Supports getSupports(String mimeType);
    List<Supports> getSupports();
    void addSupports(Supports supps);
+   Set<String> getConfiguredMimeTypes();
+   boolean isPortletModeSupported(String mimeType, PortletMode pm);
 
    Description getDescription(Locale locale);
    List<Description> getDescriptions();

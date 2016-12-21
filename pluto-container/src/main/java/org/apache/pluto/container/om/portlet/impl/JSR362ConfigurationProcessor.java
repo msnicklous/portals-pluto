@@ -460,6 +460,7 @@ public class JSR362ConfigurationProcessor extends JSR286ConfigurationProcessor {
             LOG.warn(warning);
             continue;
          }
+         
          List<PortletModeType> pmlist = st.getPortletMode();
          if (pmlist.size() == 0) {
             String info = "No portlet modes found in Supports block.";
@@ -471,8 +472,9 @@ public class JSR362ConfigurationProcessor extends JSR286ConfigurationProcessor {
             LOG.trace(info);
          }
 
-         // set up Supports
-         Supports sup = new SupportsImpl(mtt.getValue());
+         // set up Supports, discarding MIME type parameters & blanks
+         String mimetype = mtt.getValue().replaceAll("([^;]*).*", "$1").replaceAll(" ", "");
+         Supports sup = new SupportsImpl(mimetype);
          for (PortletModeType item : pmlist) {
             sup.addPortletMode(item.getValue());
          }

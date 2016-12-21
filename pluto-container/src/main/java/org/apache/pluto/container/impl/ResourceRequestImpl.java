@@ -21,10 +21,13 @@ import java.util.Map;
 
 import javax.portlet.CacheControl;
 import javax.portlet.PortletAsyncContext;
+import javax.portlet.PortletMode;
 import javax.portlet.PortletRequest;
 import javax.portlet.ResourceParameters;
 import javax.portlet.ResourceRequest;
 import javax.portlet.ResourceResponse;
+import javax.portlet.ResourceURL;
+import javax.portlet.WindowState;
 import javax.servlet.DispatcherType;
 
 import org.apache.pluto.container.PortletResourceRequestContext;
@@ -32,66 +35,63 @@ import org.apache.pluto.container.PortletResourceResponseContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ResourceRequestImpl extends ClientDataRequestImpl implements ResourceRequest
-{
+public class ResourceRequestImpl extends ClientDataRequestImpl implements ResourceRequest {
 
    /** Internal logger. */
    private static final Logger LOG = LoggerFactory.getLogger(ResourceRequestImpl.class);
 
-    private CacheControl cacheControl;
-    
-    public ResourceRequestImpl(PortletResourceRequestContext requestContext, PortletResourceResponseContext responseContext)
-    {
-        super(requestContext, responseContext, PortletRequest.RESOURCE_PHASE);
-        this.cacheControl = responseContext.getCacheControl();
-    }
-    
-    @Override
-    protected PortletResourceRequestContext getRequestContext() {
-       return (PortletResourceRequestContext) requestContext;
-    }
-    
-    protected PortletResourceResponseContext getResponseContext() {
-       return (PortletResourceResponseContext) responseContext;
-    }
-    
-    @Override
-    public String getProperty(String name)
-    {
-        String result = getMimeRequestProperty(name, cacheControl);
-        return result != null ? result : super.getProperty(name);
-    }
+   private CacheControl        cacheControl;
 
-    public String getCacheability()
-    {
-        return getRequestContext().getCacheability();
-    }
+   public ResourceRequestImpl(PortletResourceRequestContext requestContext, PortletResourceResponseContext responseContext) {
+      super(requestContext, responseContext, PortletRequest.RESOURCE_PHASE);
+      this.cacheControl = responseContext.getCacheControl();
+   }
 
-    public String getETag()
-    {
-        return cacheControl.getETag();
-    }
+   @Override
+   protected PortletResourceRequestContext getRequestContext() {
+      return (PortletResourceRequestContext) requestContext;
+   }
 
-    public Map<String, String[]> getPrivateRenderParameterMap()
-    {
-        return cloneParameterMap(getRequestContext().getPrivateRenderParameterMap());
-    }
+   protected PortletResourceResponseContext getResponseContext() {
+      return (PortletResourceResponseContext) responseContext;
+   }
 
-    public String getResourceID()
-	{
-		return getRequestContext().getResourceID();
-	}
+   @Override
+   public String getProperty(String name) {
+      String result = getMimeRequestProperty(name, cacheControl);
+      return result != null ? result : super.getProperty(name);
+   }
 
-    public String getResponseContentType()
-    {
-        return getServletRequest().getHeader("accept");
-    }
+   @Override
+   public String getCacheability() {
+      return getRequestContext().getCacheability();
+   }
 
-    public Enumeration<String> getResponseContentTypes()
-    {
-        return getServletRequest().getHeaders("accept");
-    }
-   
+   @Override
+   public String getETag() {
+      return cacheControl.getETag();
+   }
+
+   @Override
+   public Map<String, String[]> getPrivateRenderParameterMap() {
+      return cloneParameterMap(getRequestContext().getPrivateRenderParameterMap());
+   }
+
+   @Override
+   public String getResourceID() {
+      return getRequestContext().getResourceID();
+   }
+
+   @Override
+   public String getResponseContentType() {
+      return getServletRequest().getHeader("accept");
+   }
+
+   @Override
+   public Enumeration<String> getResponseContentTypes() {
+      return getServletRequest().getHeaders("accept");
+   }
+
    // Debug code - intercept getParameter call & dump all parameters to trace
    @Override
    public String getParameter(String name) {
@@ -114,6 +114,7 @@ public class ResourceRequestImpl extends ClientDataRequestImpl implements Resour
       return val;
    }
 
+   @Override
    public ResourceParameters getResourceParameters() {
       return getRequestContext().getResourceParameters();
    }
@@ -125,7 +126,9 @@ public class ResourceRequestImpl extends ClientDataRequestImpl implements Resour
 
    @Override
    public PortletAsyncContext startPortletAsync(ResourceRequest request, ResourceResponse response) throws IllegalStateException {
-      return (PortletAsyncContext) getRequestContext().startAsync(request, response);
+      // determine if called with original request and response objects
+      boolean orr = (request == this) && (response == getRequestContext().getResponse());
+      return (PortletAsyncContext) getRequestContext().startAsync(request, response, orr);
    }
 
    @Override
@@ -146,5 +149,21 @@ public class ResourceRequestImpl extends ClientDataRequestImpl implements Resour
    @Override
    public DispatcherType getDispatcherType() {
       return getRequestContext().getDispatcherType();
+   }
+   
+   @Override
+   public PortletMode getPortletMode() {
+      if (ResourceURL.FULL.equals(getCacheability())) {
+         return PortletMode.UNDEFINED;
+      }
+      return super.getPortletMode();
+   }
+   
+   @Override
+   public WindowState getWindowState() {
+      if (ResourceURL.FULL.equals(getCacheability())) {
+         return WindowState.UNDEFINED;
+      }
+      return super.getWindowState();
    }
 }

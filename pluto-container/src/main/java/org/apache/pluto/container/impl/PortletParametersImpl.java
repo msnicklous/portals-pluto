@@ -86,10 +86,10 @@ public abstract class PortletParametersImpl implements PortletParameters {
    /**
     * Throws exception if argument is null.
     * @param msg
-    * @param vals
+    * @param val
     */
-   protected void checkNull(String msg, Object... vals) {
-      if (vals == null) {
+   protected void checkNull(String msg, Object val) {
+      if (val == null) {
          throw new IllegalArgumentException("Argument " + msg + " cannot be null.");
       }
    }
@@ -110,7 +110,7 @@ public abstract class PortletParametersImpl implements PortletParameters {
    /* (non-Javadoc)
     * @see javax.portlet.PortletParameters#getNames()
     */
-   public Set<? extends String> getNames() {
+   public Set<String> getNames() {
       HashSet<String> names = new HashSet<String>();
       for (String name : params.keySet()) {
          names.add(name);

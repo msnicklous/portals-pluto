@@ -374,7 +374,7 @@ public class HttpServletPortletRequestWrapper extends HttpServletRequestWrapper 
       de.type = Type.FWD;
       de.qparms = processPath(path);
       dispatches.add(de);
-      isMethSpecialHandling = !isForwardingPossible();
+      isMethSpecialHandling = true;       //!isForwardingPossible(); (logical, but not to spec)
       isAttrSpecialHandling = true;
       
       reqctx.startDispatch(this, de.qparms, phase);
@@ -543,11 +543,19 @@ public class HttpServletPortletRequestWrapper extends HttpServletRequestWrapper 
    public String getPathTranslated() {
       if (isClosed) return null;
       handleServletPathInfo();
+      
+      String pinfo = getPathInfo();
+      if (isTrace) {
+         StringBuilder txt = new StringBuilder();
+         txt.append("Returning real path for: ").append(pinfo);
+         LOG.trace(txt.toString());
+      }
 
       // base the return value on the derived path method value
-      if (isMethSpecialHandling && origin.get(FORWARD_CONTEXT_PATH).equals(preq.getContextPath())) {
+      if (pinfo != null && isMethSpecialHandling && 
+            origin.get(FORWARD_CONTEXT_PATH).equals(preq.getContextPath())) {
          // can only (and possibly) do this while still within the same context
-         return getHreq().getServletContext().getRealPath(getPathInfo());
+         return getHreq().getServletContext().getRealPath(pinfo);
       }
       return null;
    }

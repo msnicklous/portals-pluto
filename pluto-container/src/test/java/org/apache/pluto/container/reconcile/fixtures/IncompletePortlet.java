@@ -20,14 +20,15 @@
 package org.apache.pluto.container.reconcile.fixtures;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
 import javax.portlet.EventRequest;
 import javax.portlet.EventResponse;
 import javax.portlet.PortletConfig;
 import javax.portlet.annotations.ActionMethod;
+import javax.portlet.annotations.DestroyMethod;
 import javax.portlet.annotations.EventMethod;
+import javax.portlet.annotations.InitMethod;
 import javax.portlet.annotations.PortletQName;
 
 import org.apache.pluto.container.bean.processor.fixtures.InvocationResults;
@@ -42,10 +43,22 @@ import org.apache.pluto.container.bean.processor.fixtures.InvocationResults;
 @ApplicationScoped
 public class IncompletePortlet {
    
-   @Inject
-   private InvocationResults meths;
+   private InvocationResults meths = InvocationResults.getInvocationResults();
    
    private PortletConfig config;
+  
+   @InitMethod("IncompletePortlet")
+   public void init(PortletConfig config) {
+      this.config = config;
+      meths.addMethod(this.getClass().getSimpleName() + "#init");
+      meths.setConfigExists(config != null);
+   }
+  
+   @DestroyMethod("IncompletePortlet")
+   public void destroy() {
+      meths.addMethod(this.getClass().getSimpleName() + "#destroy");
+      meths.setConfigExists(config != null);
+   }   
    
    @ActionMethod(portletName="IncompletePortlet", publishingEvents = {
          @PortletQName(namespaceURI="http://www.apache.org/", localPart="event1"),

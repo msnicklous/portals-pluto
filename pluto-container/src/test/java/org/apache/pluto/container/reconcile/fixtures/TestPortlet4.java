@@ -20,7 +20,6 @@
 package org.apache.pluto.container.reconcile.fixtures;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
 import javax.portlet.EventRequest;
@@ -29,7 +28,9 @@ import javax.portlet.PortletConfig;
 import javax.portlet.ResourceRequest;
 import javax.portlet.ResourceResponse;
 import javax.portlet.annotations.ActionMethod;
+import javax.portlet.annotations.DestroyMethod;
 import javax.portlet.annotations.EventMethod;
+import javax.portlet.annotations.InitMethod;
 import javax.portlet.annotations.PortletQName;
 import javax.portlet.annotations.RenderMethod;
 import javax.portlet.annotations.ServeResourceMethod;
@@ -45,11 +46,23 @@ import org.apache.pluto.container.bean.processor.fixtures.InvocationResults;
 @ApplicationScoped
 public class TestPortlet4 {
    
-   @Inject
-   private InvocationResults meths;
+   private InvocationResults meths = InvocationResults.getInvocationResults();
    
    private PortletConfig config;
-   
+
+   @InitMethod("Portlet4")
+   public void init(PortletConfig config) {
+      this.config = config;
+      meths.addMethod(this.getClass().getSimpleName() + "#init");
+      meths.setConfigExists(config != null);
+   }
+  
+   @DestroyMethod("Portlet4")
+   public void destroy() {
+      meths.addMethod(this.getClass().getSimpleName() + "#destroy");
+      meths.setConfigExists(config != null);
+   }   
+
    @RenderMethod(portletNames="Portlet4", portletMode="")
    public String myView() {
       meths.addMethod(this.getClass().getSimpleName() + "#myView");
